@@ -1,0 +1,143 @@
+#include <ifx_dps310.h>
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+
+#define BLYNK_PRINT Serial
+
+char auth[] = "YourAuthToken";
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "YourNetworkName";
+char pass[] = "YourPassword";
+
+const unsigned char pressureLength = 50;
+unsigned char pressureCount = 0;
+long int pressure[pressureLength];
+unsigned char temperatureCount = 0;
+const unsigned char temperatureLength = 50;
+long int temperature[temperatureLength];
+
+/*these thresholds will change according to where u currecntly are, 
+these values worked perfetly in our coastal region where average temperatures were
+34 degrees celsius
+*/
+int pressureFallingThresh = 1;
+int pressureSleepingThresh = 4;
+int tempFeverThresh = 39;
+int pressureJogThresh = 5;
+
+void setup()
+{
+  Serial.begin(9600);
+  Blynk.begin(auth, ssid, pass);
+  while (!Serial);
+  ifxDps310.begin(Wire);
+  
+  int ret = ifxDps310.setInterruptPolarity(1);
+  ret = ifxDps310.setInterruptSources(1, 0, 0);
+  //clear interrupt flag by reading
+  ifxDps310.getIntStatusFifoFull();
+
+  int interruptPin = 3;
+  pinMode(interruptPin, INPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), onFifoFull, RISING);
+
+  //start of a continuous measurement just like before
+  int temp_mr = 3;
+  int temp_osr = 2;
+  int prs_mr = 1;
+  int prs_osr = 3;
+  ret = ifxDps310.startMeasureBothCont(temp_mr, temp_osr, prs_mr, prs_osr);
+  if (ret != 0)
+  {
+    Serial.print("Init FAILED! ret = ");
+    Serial.println(ret);
+  }
+  else
+  {
+    Serial.println("Init complete!");
+  }
+}
+
+
+void loop()
+{
+  Blynk.run();
+  
+  Serial.println("loop running");
+  delay(500);
+  
+  if (pressureCount == pressureLength && temperatureCount == temperatureLength)
+  {
+    //print results
+    Serial.println();
+    Serial.println();
+    Serial.print(temperatureCount);
+    Serial.println(" temperature values found: ");
+    for (int i = 0; i < temperatureCount; i++)
+    {
+      Serial.print(temperature[i]);
+      if (temperature[i] > tempFeverThresh){
+        feverEmail();
+      }
+      Serial.println(" degrees of Celsius");
+    }
+    Serial.println();
+    Serial.print(pressureCount);
+    Serial.println(" pressure values found: ");
+    for (int i = 0; i < pressureCount; i++)
+    {
+      Serial.print(pressure[i]);
+      if (pressure[i] < pressureFallingThresh){
+        fallEmail();
+      }
+      else if (pressure[i] < pressureSleepingThresh && pressure[i] < pressureFallingThresh){
+        wakingUpEmail();
+      }
+      Serial.println(" Pascal");
+    }
+    Serial.println();
+    Serial.println();
+    //reset result counters
+    pressureCount = 0;
+    temperatureCount = 0;
+  }
+ 
+}
+
+void feverEmail()
+{
+  Serial.println("Button is pressed."); // This can be seen in the Serial Monitor
+  Blynk.email("your_email@mail.com", "Subject: your patient has fever", "your patient has a fever and his/ her body temp is", temperature);
+}
+
+void fallEmail()
+{
+  Serial.println("Button is pressed."); // This can be seen in the Serial Monitor
+  Blynk.email("your_email@mail.com", "Subject: your patient just had a fall", "your patient just had a fall and requires assistance");
+}
+
+void wakingUpEmail()
+{
+  Serial.println("Button is pressed."); // This can be seen in the Serial Monitor
+  Blynk.email("your_email@mail.com", "Subject: your patient has just left his/her bed", "your patient has a just left the bed for unknown reasons, he/she needs assistance");
+}
+
+//interrupt handler
+void onFifoFull()
+{
+  //message for debugging
+  Serial.println("Interrupt handler called");
+
+  //clear interrupt flag by reading
+  ifxDps310.getIntStatusFifoFull();
+
+  //calculate the number of free indexes in the result arrays
+  unsigned char prs_freespace = pressureLength - pressureCount;
+  unsigned char temp_freespace = temperatureLength - temperatureCount;
+  //read the results from Dps310, new results will be added at the end of the arrays
+  ifxDps310.getContResults(&temperature[temperatureCount], temp_freespace, &pressure[pressureCount], prs_freespace);
+  //after reading the result counters are increased by the amount of new results
+  pressureCount += prs_freespace;
+  temperatureCount += temp_freespace;
+}
