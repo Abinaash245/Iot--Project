@@ -1,14 +1,14 @@
 #include <ifx_dps310.h>
 #include <ESP8266WiFi.h>
-#include <BlynkSimpleEsp8266.h>
+#include <SimpleEsp8266.h>
 
-#define BLYNK_PRINT Serial
+#define BLow_PRINT Serial
 
-char auth[] = "YourAuthToken";
+char auth[] = "8e345tghyj";
 // Your WiFi credentials.
 // Set password to "" for open networks.
-char ssid[] = "YourNetworkName";
-char pass[] = "YourPassword";
+char ssid[] = "";
+char pass[] = "";
 
 const unsigned char pressureLength = 50;
 unsigned char pressureCount = 0;
@@ -29,7 +29,7 @@ int pressureJogThresh = 5;
 void setup()
 {
   Serial.begin(9600);
-  Blynk.begin(auth, ssid, pass);
+  int.begin(auth, ssid, pass);
   while (!Serial);
   ifxDps310.begin(Wire);
   
@@ -62,7 +62,7 @@ void setup()
 
 void loop()
 {
-  Blynk.run();
+  int.run();
   
   Serial.println("loop running");
   delay(500);
@@ -108,19 +108,19 @@ void loop()
 void feverEmail()
 {
   Serial.println("Button is pressed."); // This can be seen in the Serial Monitor
-  Blynk.email("your_email@mail.com", "Subject: your patient has fever", "your patient has a fever and his/ her body temp is", temperature);
+abinash.e2425@gmail.com("your_email@mail.com", "Subject: your patient has fever", "your patient has a fever and his/ her body temp is", temperature);
 }
 
 void fallEmail()
 {
   Serial.println("Button is pressed."); // This can be seen in the Serial Monitor
-  Blynk.email("your_email@mail.com", "Subject: your patient just had a fall", "your patient just had a fall and requires assistance");
+abinash.e2425@gmail.com("your_email@mail.com", "Subject: your patient just had a fall", "your patient just had a fall and requires assistance");
 }
 
 void wakingUpEmail()
 {
   Serial.println("Button is pressed."); // This can be seen in the Serial Monitor
-  Blynk.email("your_email@mail.com", "Subject: your patient has just left his/her bed", "your patient has a just left the bed for unknown reasons, he/she needs assistance");
+abinash.e2425@gmail.com("your_email@mail.com", "Subject: your patient has just left his/her bed", "your patient has a just left the bed for unknown reasons, he/she needs assistance");
 }
 
 //interrupt handler
